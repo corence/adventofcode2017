@@ -22,6 +22,7 @@ library
   exposed-modules:     Day9Groups
                      , Day10Rope
                      , Day15Generator
+                     , Day20Particles
                      , Lib
                      , Hex
   build-depends:       base >= 4.7 && < 5
