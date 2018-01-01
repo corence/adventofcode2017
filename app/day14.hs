@@ -90,15 +90,28 @@ boolsToIndices values = zip [0..] values & filter snd & map fst
 binaryToBools :: String -> [Bool]
 binaryToBools = map (== '1')
 
-indicesToRegions :: Int -> [Int] -> Map Int Int
-indicesToRegions rowLength = foldl' (addPixel rowLength) Map.empty
+indicesToRegions :: Int -> [Int] -> [Set Int]
+indicesToRegions rowLength = foldl' (addPixel rowLength) []
 
-countRegions :: Map Int Int -> Int
-countRegions = Set.size . Set.fromList . Map.elems
+countRegions :: Set Int -> Int
+countRegions = Set.size
+
+--
+
+addPixelShit :: Int -> [Set Int] -> Int -> [Set Int]
+addPixelShit rowLength regions index
+  = foldr (integrate index) (Set.singleton index : regions) indexesToIntegrate
+  where integrate index target regions = undefined
+        indexesToIntegrate = catMaybes [
+          if index     `mod` rowLength /= 0 then Just (index - 1) else Nothing,
+          if index + 1 `mod` rowLength /= 0 then Just (index + 1) else Nothing,
+          Just (index - rowLength),
+          Just (index + rowLength)
+          ]
 
 -- TODO: i hate this method; it would be great to refactor it to be much longer so that it's clear
-addPixel :: Int -> Map Int Int -> Int -> Map Int Int
-addPixel rowLength regions index = Map.insert index (head possibleValues) regions
+addPixelOld :: Int -> Map Int Int -> Int -> Map Int Int
+addPixelOld rowLength regions index = Map.insert index (head possibleValues) regions
   where possibleValues = catMaybes [
           if index `mod` rowLength == 0 then Nothing else Map.lookup (index - 1) regions,
           if index + 1 `mod` rowLength == 0 then Nothing else Map.lookup (index + 1) regions,
