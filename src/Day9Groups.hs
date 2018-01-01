@@ -3,12 +3,15 @@ module Day9Groups where
 
 import Lib
 import Text.ParserCombinators.ReadP
-import Control.Applicative((<|>))
 
-data Entry = Group [Entry] | Garbage
+data Entry = Group [Entry] | Garbage Int
+
+countGarbage :: Entry -> Int
+countGarbage (Garbage n) = n
+countGarbage (Group entries) = sum (map countGarbage entries)
 
 countGroups :: Entry -> Int
-countGroups Garbage = 0
+countGroups (Garbage _) = 0
 countGroups (Group entries)
   = map countGroups entries & sum & (+ 1)
 
@@ -17,7 +20,7 @@ parseCountGroups input
  = actuallyParse parseEntry input & countGroups
 
 scoreGroups :: Int -> Entry -> Int
-scoreGroups _ Garbage = 0
+scoreGroups _ (Garbage _) = 0
 scoreGroups depth (Group entries)
   = map (scoreGroups (depth + 1)) entries & sum & (+ depth)
 
@@ -26,7 +29,7 @@ score input
   = actuallyParse parseEntry input & scoreGroups 1
 
 parseEntry :: ReadP Entry
-parseEntry = parseGarbage <|> parseGroup
+parseEntry = parseGarbage <++ parseGroup
 
 parseGroup :: ReadP Entry
 parseGroup = do
@@ -39,8 +42,8 @@ parseGroup = do
 parseGarbage :: ReadP Entry
 parseGarbage = do
   char '<'
-  many character
+  counts <- many character
   char '>'
   skipSpaces
-  pure Garbage
-  where character = (char '!' >> get) <++ satisfy (/= '>')
+  pure $ Garbage (sum counts)
+  where character = (char '!' >> get >> pure 0) <++ (satisfy (/= '>') >> pure 1)
