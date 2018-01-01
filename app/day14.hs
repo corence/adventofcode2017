@@ -7,6 +7,10 @@ import qualified Data.Set as Set
 import Data.Set(Set)
 import Data.Maybe(catMaybes)
 import Data.List(foldl')
+import Data.Bifunctor
+
+type Region = Set Pos
+type Pos = (Int, Int)
 
 makeCodes :: String -> [String]
 makeCodes input = [0..127] & map ((input ++) . ("-" ++) . show)
@@ -31,12 +35,14 @@ main = do
   "flqrgnkx" & makeCodes & map knotHash & map hexToBinary & concat & binaryToBools & boolsToIndices & length & print
   "flqrgnkx" & makeCodes & map knotHash & map hexToBinary & concat & binaryToBools & boolsToIndices & take 10 & print
   putStrLn "-7"
-  "flqrgnkx" & makeCodes & map knotHash & map hexToBinary & concat & binaryToBools & boolsToIndices & indicesToRegions 128 & Map.size & print
+  --"flqrgnkx" & makeCodes & map knotHash & map hexToBinary & concat & binaryToBools & boolsToIndices & indicesToRegions 128 & Map.size & print
 
   -- part 1
   putStrLn "---"
-  "flqrgnkx" & keyToBools & boolsToRegions 128 & Map.keys & length & print
-  "jzgqcdpd" & keyToBools & boolsToRegions 128 & Map.keys & length & print
+  putStrLn "part1 example must be 8108:"
+  "flqrgnkx" & keyToBools & boolsToIndices & length & print
+  putStrLn "part1 real answer is 8074:"
+  "jzgqcdpd" & keyToBools & boolsToIndices & length & print
 
   -- part 2 sample
   putStrLn "---"
@@ -58,17 +64,18 @@ main = do
                           "01"
                        ++ "10"
 
-  putStr "expected: 2, actual: " >> part2TestData1 & boolsToRegions 4 & countRegions & print
-  part2TestData2 4 & boolsToRegions 4 & Map.showTree & putStrLn
+  putStr "expected: 2, actual: " >> part2TestData1 & boolsToRegions 4 & length & print
   part2TestData2 4 & boolsToIndices & print
-  putStr "expected: 8, actual: " >> part2TestData2 4 & boolsToRegions 4 & countRegions & print
-  putStr "expected: 2, actual: " >> part2TestData3 & boolsToRegions 7 & countRegions & print
-  putStr "expected: 2, actual: " >> part2TestData4 & boolsToRegions 2 & countRegions & print
+  putStr "expected: 8, actual: " >> part2TestData2 4 & boolsToRegions 4 & length & print
+  putStr "expected: 2, actual: " >> part2TestData3 & boolsToRegions 7 & length & print
+  putStr "expected: 2, actual: " >> part2TestData4 & boolsToRegions 2 & length & print
 
   -- part 2
   putStrLn "---"
-  "flqrgnkx" & keyToBools & boolsToRegions 128 & countRegions & print
-  "jzgqcdpd" & keyToBools & boolsToRegions 128 & countRegions & print
+  putStrLn "part2 example is 1242:"
+  "flqrgnkx" & keyToBools & boolsToRegions 128 & length & print
+  putStrLn "part2 real answer:"
+  "jzgqcdpd" & keyToBools & boolsToRegions 128 & length & print
   putStrLn "(2122 is too high)"
 
 keyToBools :: String -> [Bool]
@@ -79,46 +86,50 @@ keyToBools
   . map knotHash
   . makeCodes
 
-boolsToRegions :: Int -> [Bool] -> Map Int Int
+boolsToRegions :: Int -> [Bool] -> [Region]
 boolsToRegions rowLength
-  = indicesToRegions rowLength
+  = posesToRegions
+  . Set.fromList
+  . map (indexToPos rowLength)
   . boolsToIndices
+
+indexToPos :: Int -> Int -> (Int, Int)
+indexToPos rowLength index = (index `mod` rowLength, index `div` rowLength)
+
+posesToRegions :: Set Pos -> [Region]
+posesToRegions poses
+  | Set.null poses = []
+  | otherwise = extract (getOne poses) poses & next
+  where getOne = head . Set.toList
+        next (group, newPoses) = Set.fromList group : posesToRegions newPoses
+
+extract :: Pos -> Set Pos -> ([Pos], Set Pos)
+extract pos poses
+  | Set.member pos poses
+      = ([pos], Set.delete pos poses)
+      & extractAt (first (+ 1))
+      & extractAt (first (subtract 1))
+      & extractAt (second (+ 1))
+      & extractAt (second (subtract 1))
+  | otherwise = ([], poses)
+  where extractAt mutate (results, poses) = extract (mutate pos) poses & first (++ results)
+
+extractRegion :: Pos -> Set Pos -> ([Region], Set Pos)
+extractRegion pos@(x, y) poses
+  = foldl' tryAddPos ([Set.singleton pos], Set.delete pos poses) targets
+      where targets = [(x + 1, y),
+                       (x - 1, y),
+                       (x, y + 1),
+                       (x, y - 1)]
+            tryAddPos (regions, poses) pos2
+                        | Set.member pos2 poses = extractRegion pos2 poses & first (++ regions)
+                        | otherwise = (regions, poses)
 
 boolsToIndices :: [Bool] -> [Int]
 boolsToIndices values = zip [0..] values & filter snd & map fst
 
 binaryToBools :: String -> [Bool]
 binaryToBools = map (== '1')
-
-indicesToRegions :: Int -> [Int] -> [Set Int]
-indicesToRegions rowLength = foldl' (addPixel rowLength) []
-
-countRegions :: Set Int -> Int
-countRegions = Set.size
-
---
-
-addPixelShit :: Int -> [Set Int] -> Int -> [Set Int]
-addPixelShit rowLength regions index
-  = foldr (integrate index) (Set.singleton index : regions) indexesToIntegrate
-  where integrate index target regions = undefined
-        indexesToIntegrate = catMaybes [
-          if index     `mod` rowLength /= 0 then Just (index - 1) else Nothing,
-          if index + 1 `mod` rowLength /= 0 then Just (index + 1) else Nothing,
-          Just (index - rowLength),
-          Just (index + rowLength)
-          ]
-
--- TODO: i hate this method; it would be great to refactor it to be much longer so that it's clear
-addPixelOld :: Int -> Map Int Int -> Int -> Map Int Int
-addPixelOld rowLength regions index = Map.insert index (head possibleValues) regions
-  where possibleValues = catMaybes [
-          if index `mod` rowLength == 0 then Nothing else Map.lookup (index - 1) regions,
-          if index + 1 `mod` rowLength == 0 then Nothing else Map.lookup (index + 1) regions,
-          Map.lookup (index - rowLength) regions,
-          Map.lookup (index + rowLength) regions,
-          Just index
-          ]
 
 -- something something printf but i'm on the plane so i have to write whatever will work for now and refactor this later
 hexToBinary :: String -> String
