@@ -5,8 +5,6 @@ import qualified Data.Map as Map
 import Data.Map(Map)
 import Lib
 
-import Debug.Trace
-
 type Pos = Map Dir Int
 
 data Dir = NW | N | NE | SE | S | SW deriving (Eq, Ord, Show)
@@ -17,19 +15,19 @@ origin = Map.empty
 
 normalize :: Pos -> Pos
 normalize pos
-  = if pos == pos2 -- ewwww. but we need it because otherwise these operations are order-sensitive.
-      then pos2
-      else normalize pos2
-    where pos2 = pos
-            & transmute N NE NW
-            & transmute S SE SW
-            & transmute NE N SE
-            & transmute NW N SW
-            & transmute SE S NE
-            & transmute SW S NW
-            & cancel N S
-            & cancel NW SE
-            & cancel NE SW
+  = pos
+    -- step 1: cancel out opposing directions
+    & cancel N S
+    & cancel NW SE
+    & cancel NE SW
+    -- step 2: transmute into the diagonals
+    & transmute NE N SE
+    & transmute NW N SW
+    & transmute SE S NE
+    & transmute SW S NW
+    -- step 3: transmute into north/south. NOTE: This needs to happen after step 1
+    & transmute N NE NW
+    & transmute S SE SW
 
 -- the given 2 directions cancel each other out
 -- one of the directions is guaranteed to be zero after this
