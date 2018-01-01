@@ -1,16 +1,35 @@
 
 import Text.ParserCombinators.ReadP
+import Data.Char
 import Data.List
 import Lib
+
+starter = "abcdefghijklmnop"
 
 main :: IO ()
 main = do
   input <- readFile "inputs/input16.txt" <&> lines <&> head
   let instructions = actuallyParse parseDance input
-  let result = foldl' (&) "abcdefghijklmnop" instructions
+  let result = foldl' (&) starter instructions
   putStrLn result
-  let result2 = "abcdefghijklmnop" & iterate (\initial -> foldl' (&) initial instructions) & (!! 99)
-  putStrLn result2
+  let result2 = starter & iterate (\initial -> foldl' (&) initial instructions) & take 5
+  print result2
+  let rearrange = rearrangeVia (findIndexes result)
+  let result3 = result & iterate rearrange & take 5
+  print result3
+  print (rearrange starter)
+
+-- "abcd" "bdca" -> [!! 1, !! 3, !! 2, !! 0]
+
+findIndexes :: String -> [Int]
+findIndexes string
+  = string
+  & map ord
+  & map (subtract (ord 'a'))
+
+rearrangeVia :: [Int] -> String -> String
+rearrangeVia indexes string
+  = map (string !!) indexes
 
 spin :: Int -> String -> String
 spin num string = drop (length string - num) string ++ take (length string - num) string
