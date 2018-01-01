@@ -13,22 +13,55 @@ makeCodes input = [0..127] & map ((input ++) . ("-" ++) . show)
 
 main :: IO ()
 main = do
+  -- deconstructing part 1
+  "flqrgnkx" & print
+  putStrLn "-1"
+  "flqrgnkx" & makeCodes & length & print
+  "flqrgnkx" & makeCodes & head & print
+  putStrLn "-2"
+  "flqrgnkx" & makeCodes & map knotHash & head & print
+  putStrLn "-3"
+  "flqrgnkx" & makeCodes & map knotHash & map hexToBinary & head & print
+  putStrLn "-4"
+  "flqrgnkx" & makeCodes & map knotHash & map hexToBinary & concat & length & print
+  putStrLn "-5"
+  "flqrgnkx" & makeCodes & map knotHash & map hexToBinary & concat & binaryToBools & take 10 & print
+  putStrLn "-6"
+  "flqrgnkx" & makeCodes & map knotHash & map hexToBinary & concat & binaryToBools & boolsToIndices & length & print
+  "flqrgnkx" & makeCodes & map knotHash & map hexToBinary & concat & binaryToBools & boolsToIndices & take 10 & print
+  putStrLn "-7"
+  "flqrgnkx" & makeCodes & map knotHash & map hexToBinary & concat & binaryToBools & boolsToIndices & indicesToRegions & Map.size & print
+
   -- part 1
-  "flqrgnkx" & keyToGridIndices & length & print
-  "jzgqcdpd" & keyToGridIndices & length & print
+  putStrLn "---"
+  "flqrgnkx" & keyToRegions & Map.keys & length & print
+  "jzgqcdpd" & keyToRegions & Map.keys & length & print
 
   -- part 2
+  putStrLn "---"
   "flqrgnkx" & keyToRegions & countRegions & print
   "jzgqcdpd" & keyToRegions & countRegions & print
+  putStrLn "(2122 is too high)"
 
 keyToRegions :: String -> Map Int Int
-keyToRegions = indicesToRegions . keyToGridIndices
+keyToRegions
+  = indicesToRegions
+  . boolsToIndices
+  . binaryToBools
+  . concat
+  . map hexToBinary
+  . map knotHash
+  . makeCodes
 
-keyToGridIndices :: String -> [Int]
-keyToGridIndices input = input & makeCodes & makeHashes & makeBoolsGrid & getIndices
-  where getIndices values = zip [0..] values & filter snd & map fst
-        makeHashes = map (hexToBinary . knotHash)
-        makeBoolsGrid = map (== '1') . concat
+--keyToGridIndices :: String -> [Int]
+--keyToGridIndices input = input & makeCodes & makeHashes & makeBoolsGrid & getIndices
+--  where makeHashes = map (hexToBinary . knotHash)
+
+boolsToIndices :: [Bool] -> [Int]
+boolsToIndices values = zip [0..] values & filter snd & map fst
+
+binaryToBools :: String -> [Bool]
+binaryToBools = map (== '1')
 
 indicesToRegions :: [Int] -> Map Int Int
 indicesToRegions = foldl' (addPixel 128) Map.empty
