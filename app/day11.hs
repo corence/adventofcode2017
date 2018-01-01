@@ -16,6 +16,11 @@ main = do
   print (normalize pos)
   print $ distanceFromOrigin pos
 
+  -- part 2
+  let poses = plotPath origin dirs
+  let biggestDistance = map distanceFromOrigin poses & maximum
+  print biggestDistance
+
 parseDirs :: ReadP [Dir]
 parseDirs = do
   strings <- sepBy (many1 $ satisfy isAlpha) (char ',')

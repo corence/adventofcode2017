@@ -4,6 +4,7 @@ module Hex where
 import qualified Data.Map as Map
 import Data.Map(Map)
 import Lib
+import Data.List
 
 type Pos = Map Dir Int
 
@@ -62,3 +63,6 @@ go dir = Map.insertWith (+) dir 1
 
 followPath :: Pos -> [Dir] -> Pos
 followPath = foldr go
+
+plotPath :: Pos -> [Dir] -> [Pos]
+plotPath = scanl' (flip go)
