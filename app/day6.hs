@@ -9,9 +9,7 @@ import Control.Monad.ST
 (<&>) :: (Functor f) => f a -> (a -> b) -> f b
 (<&>) = flip (<$>)
 
--- | Use local mutation for efficiency in creating a table of counts,
--- looping through to update it, and freezing the result to return.
---distribute :: Int -> V.Vector Int -> V.Vector Int
+distribute :: Int -> V.Vector Int -> V.Vector Int
 distribute index mv = do
   value <- M.read mv index
   M.modify mv (const 0) index
