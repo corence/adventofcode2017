@@ -42,8 +42,9 @@ parseGroup = do
 parseGarbage :: ReadP Entry
 parseGarbage = do
   char '<'
-  counts <- many character
+  contents <- many character
   char '>'
   skipSpaces
-  pure $ Garbage (sum counts)
-  where character = (char '!' >> get >> pure 0) <++ (satisfy (/= '>') >> pure 1)
+  let numContents = filter (/= '!') contents & length
+  pure $ Garbage numContents
+  where character = (char '!' >> get >> pure '!') <++ satisfy (/= '>')
