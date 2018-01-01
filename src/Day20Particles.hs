@@ -22,17 +22,6 @@ data Particle = Particle {
                   acc :: Vec3
                   } deriving (Show)
 
-data Cube = Cube {
-              cMin :: Vec3,
-              cMax :: Vec3
-              }
-
-data Limits = Limits {
-              lPos :: Cube,
-              lVel :: Cube,
-              lAcc :: Cube
-              }
-
 magnitude :: Vec3 -> Int
 magnitude (Vec3 x y z) = abs x + abs y + abs z
 
@@ -51,41 +40,8 @@ longerTraveller = ordFuncs & map ordFuncToComparator & mergeComparators
 ordFuncToComparator :: Ord o => (a -> o) -> a -> a -> Ordering
 ordFuncToComparator func a b = compare (func a) (func b)
 
-findLimits :: [Particle] -> Limits
-findLimits particles
-  = Limits
-      (findLimit pos particles)
-      (findLimit vel particles)
-      (findLimit acc particles)
-
-findLimit :: (Particle -> Vec3) -> [Particle] -> Cube
-findLimit func = foldr stretchLimits (Cube origin origin)
-  where stretchLimits particle = stretchCube (func particle)
-
-stretchCube :: Vec3 -> Cube -> Cube
-stretchCube addition (Cube cMin cMax) = Cube (vecMix min cMin addition) (vecMix max cMax addition)
-
 vecMix :: (Int -> Int -> Int) -> Vec3 -> Vec3 -> Vec3
 vecMix func (Vec3 x1 y1 z1) (Vec3 x2 y2 z2) = Vec3 (func x1 x2) (func y1 y2) (func z1 z2)
-
-isOutlier :: Limits -> Particle -> Bool
-isOutlier limits particle
-  = checks & map ($ limits) & map ($ particle) & or
-  where checks = [
-          isOutlierVia cMax x,
-          isOutlierVia cMax y,
-          isOutlierVia cMax z,
-          isOutlierVia cMax x,
-          isOutlierVia cMin y,
-          isOutlierVia cMin z
-          ]
-
-isOutlierVia :: (Cube -> Vec3) -> (Vec3 -> Int) -> Limits -> Particle -> Bool
-isOutlierVia decube dimensionize limits particle
-  = (dimensionize $ pos particle) == (dimensionize $ decube $ lPos limits)
-  && (dimensionize $ vel particle) == (dimensionize $ decube $ lVel limits)
-  && (dimensionize $ acc particle) == (dimensionize $ decube $ lAcc limits)
-
 
 -- eliminate collisions:
 -- 1) put all particles into a Map Vec3 [Particle]
@@ -104,33 +60,12 @@ eliminateCollisions particles
   where addParticleByPosition particle
           = Map.insertWith (++) (pos particle) [particle]
 
--- eliminate and count outliers:
--- 1) calculate the limits
--- 2) partition via isOutlier
--- 3) count the outliers and return the others
-
--- returns: (outliers, not-outliers)
-separateOutliers :: [Particle] -> ([Particle], [Particle])
-separateOutliers particles
-  = particles
-  & partition (isOutlier (findLimits particles))
-
 update :: Particle -> Particle
 update (Particle pid pos vel acc)
   = Particle pid newPos newVel acc
     where newPos = vecAdd pos newVel
           newVel = vecAdd vel acc
           vecAdd = vecMix (+)
-
-calculateOutliers :: [Particle] -> [Particle]
-calculateOutliers [] = []
-calculateOutliers particles
-  = particles
-  & eliminateCollisions
-  & separateOutliers
-  & second (map update)
-  & second calculateOutliers
-  & uncurry (++)
 
 calculateDivergers :: [Particle] -> [Particle]
 calculateDivergers [] = []
