@@ -122,9 +122,6 @@ update (Particle pid pos vel acc)
           newVel = vecAdd vel acc
           vecAdd = vecMix (+)
 
--- downside to our approach: we can only detect and eliminate up to 6 outliers per update
--- upside to our approach is that we don't need to sort by every dimension on every time step, so we probably save time?
--- i guess it's O(n log n) either way though
 calculateOutliers :: [Particle] -> [Particle]
 calculateOutliers [] = []
 calculateOutliers particles
@@ -134,3 +131,11 @@ calculateOutliers particles
   & second (map update)
   & second calculateOutliers
   & uncurry (++)
+
+
+-- solving parallel shots, and converging shots:
+-- parallel: (same pos, same vel, same acc) (diff pos, same vel, same acc)
+-- converging: (same pos, same vel, same acc) (diff pos, diff vel, diff acc)
+-- 1) i have pulled _ahead_ of the pack in pos, vel, and acc
+-- 2) my x, y, or z is "diverging"
+-- 3) my x, y, and z are in "stasis"
