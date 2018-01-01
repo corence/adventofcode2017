@@ -43,6 +43,4 @@ parseGarbage = do
   char '>'
   skipSpaces
   pure Garbage
-  where character
-          = (char '!' >> satisfy (const True))
-            <|> satisfy (/= '>')
+  where character = (char '!' >> get) <++ satisfy (/= '>')
