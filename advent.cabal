@@ -23,6 +23,7 @@ library
                      , Day10Rope
                      , Day15Generator
                      , Day20Particles
+                     , Day22Grid
                      , Lib
                      , Hex
   build-depends:       base >= 4.7 && < 5
