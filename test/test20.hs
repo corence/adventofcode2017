@@ -57,7 +57,7 @@ main = hspec $ do
     it "catching up due to higher acceleration" $ do
       let particles = [
                         Particle 0 (Vec3 0 0 0) (Vec3 (-2) 0 0) (Vec3 2 0 0),
-                        Particle 1 (Vec3 1 0 0) (Vec3 1 0 0) (Vec3 1 0 0)
+                        Particle 1 (Vec3 3 0 0) (Vec3 1 0 0) (Vec3 1 0 0)
                         ]
                         -- (0,-2,2) (3,1,1)
                         -- (0,0,2) (5,2,1)
@@ -70,12 +70,12 @@ main = hspec $ do
     it "diverge, then converge later" $ do
       let particles = [
                         Particle 0 (Vec3 0 0 0) (Vec3 6 1 0) (Vec3 (-2) 0 0),
-                        Particle 1 (Vec3 0 8 0) (Vec3 (-9) (-1) 0) (Vec3 3 0 0)
+                        Particle 1 (Vec3 0 10 0) (Vec3 (-9) (-1) 0) (Vec3 3 0 0)
                         ]
-                        -- (0,0,0) (0,8,0)
-                        -- (4,1,0) (-6,7,0)
-                        -- (6,2,0) (-9,6,0)
-                        -- (6,3,0) (-9,5,0)
-                        -- (4,4,0) (-6,4,0)
+                        -- (0,0,0) (0,10,0)
+                        -- (4,1,0) (-6,9,0)
+                        -- (6,2,0) (-9,8,0)
+                        -- (6,3,0) (-9,7,0)
+                        -- (4,4,0) (-6,6,0)
                         -- (0,5,0) (0,5,0)
       (calculateDivergers particles & length) `shouldBe` 0

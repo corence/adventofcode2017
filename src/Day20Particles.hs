@@ -167,7 +167,7 @@ canConverge particles particle = any (canConvergeWith particle) particles
 canConvergeInDimension :: (Vec3 -> Int) -> Particle -> Particle -> Bool
 canConvergeInDimension dimensionize p1 p2
   =  (elem LT comparisons && elem GT comparisons)
-  -- || (all (== EQ) comparisons)
+  || (pid p1 /= pid p2 && all (== EQ) comparisons)
   where comparisons = [
           compare (pos p1 & dimensionize) (pos p2 & dimensionize),
           compare (vel p1 & dimensionize) (vel p2 & dimensionize),

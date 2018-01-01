@@ -34,7 +34,7 @@ part2 = readFile "inputs/input20.txt"
      <&> lines
      <&> zip [0..]
      <&> map (\(num, input) -> actuallyParse (parseParticle num) input)
-     <&> calculateOutliers
+     <&> calculateDivergers
      <&> length
      >>= print
 
