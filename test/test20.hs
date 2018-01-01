@@ -21,31 +21,39 @@ main = hspec $ do
                         Particle 2 (Vec3 (-2) 0 0) (Vec3 1 0 0) (Vec3 0 0 0),
                         Particle 3 (Vec3 3 0 0) (Vec3 (-1) 0 0) (Vec3 0 0 0)
                         ]
-      (calculateOutliers particles & length) `shouldBe` 1
+      (calculateDivergers particles & length) `shouldBe` 1
     it "parallel shots" $ do
       let particles = [
                         Particle 0 (Vec3 3 0 0) (Vec3 0 2 0) (Vec3 0 0 1),
                         Particle 1 (Vec3 6 0 0) (Vec3 0 2 0) (Vec3 0 0 1)
                         ]
-      (calculateOutliers particles & length) `shouldBe` 2
+      (calculateDivergers particles & length) `shouldBe` 2
     it "trailing shot" $ do
       let particles = [
                         Particle 0 (Vec3 6 3 0) (Vec3 0 2 0) (Vec3 0 0 0),
                         Particle 1 (Vec3 6 0 0) (Vec3 0 2 0) (Vec3 0 0 0)
                         ]
-      (calculateOutliers particles & length) `shouldBe` 2
+      (calculateDivergers particles & length) `shouldBe` 2
     it "converging shots" $ do
       let particles = [
                         Particle 0 (Vec3 0 0 0) (Vec3 1 2 0) (Vec3 0 0 0),
                         Particle 1 (Vec3 6 0 0) (Vec3 (-1) 2 0) (Vec3 0 0 0)
                         ]
-      (calculateOutliers particles & length) `shouldBe` 0
+      (calculateDivergers particles & length) `shouldBe` 0
     it "static placements" $ do
       let particles = [
                         Particle 0 (Vec3 0 6 0) (Vec3 0 0 0) (Vec3 0 0 0),
                         Particle 1 (Vec3 6 0 0) (Vec3 0 0 0) (Vec3 0 0 0)
                         ]
-      (calculateOutliers particles & length) `shouldBe` 2
+      (calculateDivergers particles & length) `shouldBe` 2
+    it "more static placements" $ do
+      let particles = [
+                        Particle 0 (Vec3 0 6 0) (Vec3 0 0 0) (Vec3 0 0 0),
+                        Particle 1 (Vec3 6 0 0) (Vec3 0 0 0) (Vec3 0 0 0),
+                        Particle 2 (Vec3 6 6 0) (Vec3 0 0 0) (Vec3 0 0 0),
+                        Particle 3 (Vec3 0 0 0) (Vec3 0 0 0) (Vec3 0 0 0)
+                        ]
+      (calculateDivergers particles & length) `shouldBe` 4
     it "catching up due to higher acceleration" $ do
       let particles = [
                         Particle 0 (Vec3 0 0 0) (Vec3 (-2) 0 0) (Vec3 2 0 0),
@@ -58,4 +66,16 @@ main = hspec $ do
                         -- (12,6,2) (17,5,1)
                         -- (20,8,2) (23,6,1)
                         -- (30,10,2) (30,7,1)
-      (calculateOutliers particles & length) `shouldBe` 0
+      (calculateDivergers particles & length) `shouldBe` 0
+    it "diverge, then converge later" $ do
+      let particles = [
+                        Particle 0 (Vec3 0 0 0) (Vec3 6 1 0) (Vec3 (-2) 0 0),
+                        Particle 1 (Vec3 0 8 0) (Vec3 (-9) (-1) 0) (Vec3 3 0 0)
+                        ]
+                        -- (0,0,0) (0,8,0)
+                        -- (4,1,0) (-6,7,0)
+                        -- (6,2,0) (-9,6,0)
+                        -- (6,3,0) (-9,5,0)
+                        -- (4,4,0) (-6,4,0)
+                        -- (0,5,0) (0,5,0)
+      (calculateDivergers particles & length) `shouldBe` 0

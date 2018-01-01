@@ -132,6 +132,28 @@ calculateOutliers particles
   & second calculateOutliers
   & uncurry (++)
 
+calculateDivergers :: [Particle] -> [Particle]
+calculateDivergers [] = []
+calculateDivergers particles
+  = particles
+  & eliminateCollisions
+  & separateDivergers
+  & second (map update)
+  & second calculateDivergers
+  & uncurry (++)
+
+separateDivergers :: [Particle] -> ([Particle], [Particle])
+separateDivergers particles
+  = partition (mustDiverge particles) particles
+
+mustDiverge :: [Particle] -> Particle -> Bool
+mustDiverge particles = not . canConverge particles
+
+canConverge :: [Particle] -> Particle -> Bool
+canConverge particles particle = any (canConvergeWith particle) particles
+  where canConvergeWith p1 p2 = canConvergeInDimension x p1 p2
+                             && canConvergeInDimension y p1 p2
+                             && canConvergeInDimension y p1 p2
 
 -- solving parallel shots, and converging shots:
 -- parallel: (same pos, same vel, same acc) (diff pos, same vel, same acc)
@@ -139,3 +161,82 @@ calculateOutliers particles
 -- 1) i have pulled _ahead_ of the pack in pos, vel, and acc
 -- 2) my x, y, or z is "diverging"
 -- 3) my x, y, and z are in "stasis"
+
+-- consider this. Two points might converge IF between their pos, vel and acc there's one LT and one GT
+
+canConvergeInDimension :: (Vec3 -> Int) -> Particle -> Particle -> Bool
+canConvergeInDimension dimensionize p1 p2
+  =  (elem LT comparisons && elem GT comparisons)
+  -- || (all (== EQ) comparisons)
+  where comparisons = [
+          compare (pos p1 & dimensionize) (pos p2 & dimensionize),
+          compare (vel p1 & dimensionize) (vel p2 & dimensionize),
+          compare (acc p1 & dimensionize) (acc p2 & dimensionize)
+          ]
+
+{-
+ pos vel acc can_converge?
+  <   <   <  false
+  <   <   =  false
+  <   <   >  true
+  <   =   <  false
+  <   =   =  false
+  <   =   >  true
+  <   >   <  true
+  <   >   =  true
+  <   >   >  true
+  =   <   <  false
+  =   <   =  false
+  =   <   >  true
+  =   =   <  false
+  =   =   =  false
+  =   =   >  false
+  =   >   <  true
+  =   >   =  false
+  =   >   >  false
+  >   <   <  true
+  >   <   =  true
+  >   <   >  true
+  >   =   <  true
+  >   =   =  false
+  >   =   >  false
+  >   >   <  true
+  >   >   =  false
+  >   >   >  false
+-}
+
+{-
+ pos vel acc can_converge?
+  <   <   >  true
+  <   =   >  true
+  <   >   <  true
+  <   >   =  true
+  <   >   >  true
+  =   <   >  true
+  =   >   <  true
+  >   <   <  true
+  >   <   =  true
+  >   <   >  true
+  >   =   <  true
+  >   >   <  true
+-}
+
+{-
+  <   <   <  false
+  <   <   =  false
+  <   =   <  false
+  <   =   =  false
+  =   <   <  false
+  =   <   =  false
+  =   =   <  false
+  =   =   =  false
+  =   =   >  false
+  =   >   =  false
+  =   >   >  false
+  >   =   =  false
+  >   =   >  false
+  >   >   =  false
+  >   >   >  false
+-}
+
+-- so how can we scan this without using quadratic time to check it?
