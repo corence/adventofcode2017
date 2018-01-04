@@ -9,6 +9,7 @@ import Lib
 import qualified Data.Vector.Unboxed.Mutable as M
 import qualified Data.Vector.Unboxed as V
 import Control.Monad.ST
+import Data.Maybe
 
 starter :: V.Vector Char
 starter = V.fromList "abcdefghijklmnop"
@@ -23,7 +24,7 @@ main = do
   applyInstructions instructions buffer
   output <- V.freeze buffer
   print output
-  let instructions2 = instructions & repeat & take 1000000 & concat
+  let instructions2 = instructions & repeat & take 10000 & concat
   result2 <- doInstructions instructions2 starter
   print result2
   putStrLn "a"
@@ -56,14 +57,11 @@ exchange :: Int -> Int -> Instruction s
 exchange index1 index2 string = M.swap string index1 index2
 
 partner :: Char -> Char -> Instruction s
-partner char1 char2 string
-  = mapM_ doThing ([0..n] :: [Int])
-  where n = M.length string - 1 :: Int
-        doThing = M.modify string maybeSwap
-        maybeSwap c
-          | c == char1 = char2
-          | c == char2 = char1
-          | otherwise = c
+partner char1 char2 string = do
+  v <- V.unsafeFreeze string
+  let index1 = V.findIndex (== char1) v & fromJust
+  let index2 = V.findIndex (== char2) v & fromJust
+  exchange index1 index2 string
 
 parseDance :: ReadP [Instruction s]
 parseDance = sepBy parseInstruction (char ',')
