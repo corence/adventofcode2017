@@ -13,30 +13,32 @@ import Control.Monad.ST
 starter :: V.Vector Char
 starter = V.fromList "abcdefghijklmnop"
 
-type Instruction s = M.MVector s Char -> ST s ()
+type Instruction s = M.IOVector Char -> IO ()
 
 main :: IO ()
 main = do
   input <- readFile "inputs/input16.txt" <&> lines <&> head
   let instructions = actuallyParse parseDance input
-  let buffer = V.thaw starter
-  let result = buffer >>= applyInstructions instructions
-  let output = V.freeze buffer
-  print result
-  --let result2 = starter & iterate (\initial -> foldl' (&) initial instructions) & take 5
-  --print result2
+  buffer <- V.thaw starter
+  applyInstructions instructions buffer
+  output <- V.freeze buffer
+  print output
+  let instructions2 = instructions & repeat & take 1000000 & concat
+  result2 <- doInstructions instructions2 starter
+  print result2
   putStrLn "a"
 
 -- "abcd" "bdca" -> [!! 1, !! 3, !! 2, !! 0]
 
-doInstructions :: [Instruction s] -> V.Vector Char -> V.Vector Char
-doInstructions instructions input = runST $ do
+doInstructions :: [Instruction s] -> V.Vector Char -> IO (V.Vector Char)
+doInstructions instructions input = do
   buffer <- V.thaw input
   applyInstructions instructions buffer
-  V.freeze buffer
+  output <- V.freeze buffer
+  pure output
 
-applyInstructions :: [Instruction s] -> M.MVector s Char -> ST s ()
-applyInstructions instructions vector = map ($ vector) instructions & sequence_
+applyInstructions :: [Instruction s] -> M.IOVector Char -> IO ()
+applyInstructions instructions vector = mapM_ ($ vector) instructions
 
 findIndexes :: String -> [Int]
 findIndexes string
