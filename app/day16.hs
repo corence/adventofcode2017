@@ -20,14 +20,13 @@ main :: IO ()
 main = do
   input <- readFile "inputs/input16.txt" <&> lines <&> head
   let instructions = actuallyParse parseDance input
-  buffer <- V.thaw starter
-  applyInstructions instructions buffer
-  output <- V.freeze buffer
+
+  output <- doInstructions instructions starter
   print output
-  let instructions2 = instructions & repeat & take 10000 & concat
+
+  let instructions2 = instructions & repeat & take 100000 & concat
   result2 <- doInstructions instructions2 starter
   print result2
-  putStrLn "a"
 
 -- "abcd" "bdca" -> [!! 1, !! 3, !! 2, !! 0]
 
