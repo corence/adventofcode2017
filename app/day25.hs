@@ -1,8 +1,10 @@
 
 import Lib
 import Day25Turing
+import Day25TuringParser
 import qualified Data.Vector as V
 import Control.Monad.ST
+import Text.Parsec(parse)
 
 main :: IO ()
 main = do
@@ -16,10 +18,13 @@ main = do
   -}
 
   input1 <- readFile "inputs/input25test.txt"
-  let output1 = runST $ do
-                  let program = actuallyParse parseProgram input1
-                  executeProgram program
-  print $ V.length output1
+  let output1 = runST $
+                  case parse parseProgram "inputs/input25test.txt" input1 of
+                    Left err -> pure $ Left err
+                    Right program -> executeProgram program <&> Right
+  case output1 of
+    Left err -> print err
+    Right output -> print $ V.length output
 
   -- input2 <- readFile "inputs/input25.txt"
   -- let output2 = runProgram input2
