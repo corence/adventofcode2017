@@ -8,24 +8,32 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as M
 import Data.Char
 import Lib
+import Debug.Trace
+
+newtype StepName = StepName Int deriving Show
+
+nameToIndex :: StepName -> Int
+nameToIndex (StepName index) = index
 
 data Status s = Status
                   {
                     buffer :: M.MVector s Int,
                     index :: STRef s Int,
-                    nextStep :: STRef s Int
+                    nextStep :: STRef s StepName,
+                    stepsTaken :: STRef s Int,
+                    modifiedRange :: STRef s (Int, Int)
                   }
 
 data Program s = Program
                  {
-                   firstStep :: Int,
+                   firstStep :: StepName,
                    numSteps :: Int,
                    steps :: V.Vector (Step s)
                  } deriving (Show)
 
 data Step s = Step
               {
-                name :: Int,
+                name :: StepName,
                 falseFunction :: Function s,
                 trueFunction :: Function s
               }
@@ -48,20 +56,28 @@ finalBuffer status = undefined
 
 initialStatus :: Program s -> ST s (Status s)
 initialStatus program
-  = liftA3 Status (M.new 10000000) (newSTRef 5000000) (newSTRef $ firstStep program)
+  =   Status
+  <$> M.new 10000000
+  <*> newSTRef 5000000
+  <*> newSTRef (firstStep program)
+  <*> newSTRef 0
+  <*> newSTRef (5000000, 5000000)
 
 advanceProgram :: Program s -> Status s -> ST s ()
 advanceProgram program status = do
   indexVal <- readSTRef (index status)
   stepName <- readSTRef (nextStep status)
-  let step = steps program V.! stepName
-  if numSteps program > 0
+  stepsSoFar <- readSTRef (stepsTaken status)
+  let step = steps program V.! nameToIndex stepName
+  if numSteps program - stepsSoFar > 0
     then executeStep step status >> advanceProgram program status
     else pure ()
 
 executeStep :: Step s -> Status s -> ST s ()
 executeStep step status = do
+  modifySTRef (stepsTaken status) (+ 1)
   currentIndex <- index status & readSTRef
+  traceShowM currentIndex
   currentValue <- M.read (buffer status) currentIndex
   if currentValue > 0
     then executeFunction (trueFunction  step) status
@@ -78,3 +94,18 @@ executeProgram program = do
   status <- initialStatus program
   advanceProgram program status
   finalBuffer status
+
+instructionWrite :: Int -> Instruction s
+instructionWrite value status = do
+  writeIndex <- readSTRef (index status)
+  M.write (buffer status) writeIndex value
+  modifySTRef (modifiedRange status) (extendRange writeIndex)
+    where extendRange n (low, high) = (min n low, max n high)
+
+instructionMove :: (Int -> Int) -> Instruction s
+instructionMove modifier status
+  = modifySTRef (index status) modifier
+
+instructionNextStep :: StepName -> Instruction s
+instructionNextStep name status
+  = writeSTRef (nextStep status) name

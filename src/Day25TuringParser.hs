@@ -22,7 +22,7 @@ readInt = do
 parseProgram :: Parser (Program s)
 parseProgram = Program <$> parseInitialStatus <*> parseNumSteps <*> (parseSteps <&> V.fromList)
 
-parseInitialStatus :: Parser Int
+parseInitialStatus :: Parser StepName
 parseInitialStatus = string "Begin in state " *> readStepName <* string ".\n"
 
 parseNumSteps :: Parser Int
@@ -31,8 +31,8 @@ parseNumSteps
   *> readInt
   <* string " steps.\n\n"
 
-readStepName :: Parser Int
-readStepName = upper <&> ord <&> subtract (ord 'A')
+readStepName :: Parser StepName
+readStepName = upper <&> ord <&> subtract (ord 'A') <&> StepName
 
 parseSteps :: Parser [Step s]
 parseSteps = sepBy1 parseStep (string "\n")
@@ -44,7 +44,7 @@ parseStep
   <*> (parseFunction <?> "failed on the false function")
   <*> (parseFunction <?> "failed on the true function")
 
-parseStepName :: Parser Int
+parseStepName :: Parser StepName
 parseStepName = string "In state " *> readStepName <* string ":\n"
 
 parseFunction :: Parser (Function s)
@@ -64,7 +64,7 @@ parseInstructionWrite = do
   string "Write the value "
   value <- readInt
   string ".\n"
-  pure (\status -> readSTRef (index status) >>= (\index -> M.write (buffer status) index value))
+  pure $ instructionWrite value
 
 parseInstructionMove :: Parser (Instruction s)
 parseInstructionMove = do
@@ -72,8 +72,8 @@ parseInstructionMove = do
   direction <- many1 (satisfy (/= '.'))
   string ".\n"
   case direction of
-    "left"  -> pure (\status -> modifySTRef (index status) (subtract 1))
-    "right" -> pure (\status -> modifySTRef (index status) (+ 1))
+    "left"  -> pure $ instructionMove (subtract 1)
+    "right" -> pure $ instructionMove (+ 1)
     _       -> error $ "direction " ++ direction ++ " is just no good"
 
 parseInstructionNextStep :: Parser (Instruction s)
@@ -81,4 +81,4 @@ parseInstructionNextStep = do
   string "Continue with state "
   name <- readStepName
   string ".\n"
-  pure (\status -> writeSTRef (nextStep status) name)
+  pure $ instructionNextStep name
