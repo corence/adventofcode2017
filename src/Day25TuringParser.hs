@@ -12,6 +12,13 @@ import Data.Char
 import Control.Monad.ST
 import Data.STRef
 
+whitespace :: Parser String
+whitespace = many1 (tab <|> space <|> newline)
+
+newlines :: Parser String
+newlines = many1 newline
+
+-- could also be expressed as (integer <&> fromIntegral)
 parseInt :: Parser Int
 parseInt = do
   sign <- option ' ' (char '-')
@@ -19,21 +26,22 @@ parseInt = do
   pure $ read (sign : digits)
 
 parseProgram :: Parser (Program s)
-parseProgram = do
-  string "Begin in state "
-  initialStatus <- parseStepName
-  string ".\n"
-  string "Perform a diagnostic checksum after "
-  numSteps <- parseInt
-  string " steps.\n"
-  steps <- parseSteps <&> V.fromList
-  pure $ Program initialStatus numSteps steps
+parseProgram = Program <$> parseInitialStatus <*> parseNumSteps <*> (parseSteps <&> V.fromList)
+
+parseInitialStatus :: Parser Int
+parseInitialStatus = string "Begin in state " *> parseStepName <* string ".\n"
+
+parseNumSteps :: Parser Int
+parseNumSteps
+  =  string "Perform a diagnostic checksum after "
+  *> parseInt
+  <* string " steps.\n\n"
 
 parseStepName :: Parser Int
-parseStepName = anyChar <&> ord <&> subtract (ord 'A')
+parseStepName = upper <&> ord <&> subtract (ord 'A')
 
 parseSteps :: Parser [Step s]
-parseSteps = sepBy parseStep (string "\n\n")
+parseSteps = sepBy1 parseStep (string "\n\n")
 
 parseStep :: Parser (Step s)
 parseStep = do
@@ -47,9 +55,9 @@ parseStep = do
 parseFunction :: Parser (Function s)
 parseFunction = do
   string "  If the current value is "
-  anyChar -- we ignore this digit as we're assuming it from surrounding context
+  digit -- we ignore this digit as we're assuming it from surrounding context
   string ":\n"
-  sepBy parseInstruction (string "\n")
+  many parseInstruction
 
 parseInstruction :: Parser (Instruction s)
 parseInstruction = do
@@ -60,14 +68,14 @@ parseInstructionWrite :: Parser (Instruction s)
 parseInstructionWrite = do
   string "Write the value "
   value <- parseInt
-  string "."
+  string ".\n"
   pure (\status -> readSTRef (index status) >>= (\index -> M.write (buffer status) index value))
 
 parseInstructionMove :: Parser (Instruction s)
 parseInstructionMove = do
   string "Move one slot to the "
   direction <- many1 (satisfy (/= '.'))
-  anyChar
+  string ".\n"
   case direction of
     "left"  -> pure (\status -> modifySTRef (index status) (subtract 1))
     "right" -> pure (\status -> modifySTRef (index status) (+ 1))
@@ -77,5 +85,5 @@ parseInstructionNextStep :: Parser (Instruction s)
 parseInstructionNextStep = do
   string "Continue with state "
   name <- parseStepName
-  string "."
+  string ".\n"
   pure (\status -> writeSTRef (nextStep status) name)

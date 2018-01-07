@@ -21,7 +21,7 @@ data Program s = Program
                    firstStep :: Int,
                    numSteps :: Int,
                    steps :: V.Vector (Step s)
-                 }
+                 } deriving (Show)
 
 data Step s = Step
               {
@@ -29,6 +29,15 @@ data Step s = Step
                 falseFunction :: Function s,
                 trueFunction :: Function s
               }
+
+instance Show (Step s) where
+  show (Step name false true) =
+        "(Step "
+        ++ show name
+        ++ ", "
+        ++ show (length false)
+        ++ ", "
+        ++ show (length true)
 
 type Function s = [Instruction s]
 type Instruction s = Status s -> ST s ()

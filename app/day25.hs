@@ -5,6 +5,7 @@ import Day25TuringParser
 import qualified Data.Vector as V
 import Control.Monad.ST
 import Text.Parsec(parse)
+import Debug.Trace
 
 main :: IO ()
 main = do
@@ -21,7 +22,7 @@ main = do
   let output1 = runST $
                   case parse parseProgram "inputs/input25test.txt" input1 of
                     Left err -> pure $ Left err
-                    Right program -> executeProgram program <&> Right
+                    Right program -> traceShow program $ executeProgram program <&> Right
   case output1 of
     Left err -> print err
     Right output -> print $ V.length output
