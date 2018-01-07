@@ -5,12 +5,9 @@ import Day25Turing
 import Text.Parsec
 import Text.Parsec.String (Parser)
 import Text.Parsec.Token
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed.Mutable as M
 import Lib hiding (digit)
 import Data.Char
-import Control.Monad.ST
-import Data.STRef
+import qualified Data.Vector as V
 
 -- could also be expressed as (integer <&> fromIntegral)
 readInt :: Parser Int

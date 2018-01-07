@@ -5,10 +5,10 @@ import Control.Monad.ST
 import Control.Applicative
 import Data.STRef
 import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed.Mutable as M
+import qualified Data.Vector.Unboxed as VU
+import qualified Data.Vector.Unboxed.Mutable as MU
 import Data.Char
 import Lib
-import Debug.Trace
 
 newtype StepName = StepName Int deriving Show
 
@@ -17,7 +17,7 @@ nameToIndex (StepName index) = index
 
 data Status s = Status
                   {
-                    buffer :: M.MVector s Int,
+                    buffer :: MU.MVector s Int,
                     index :: STRef s Int,
                     nextStep :: STRef s StepName,
                     stepsTaken :: STRef s Int,
@@ -51,13 +51,16 @@ instance Show (Step s) where
 type Function s = [Instruction s]
 type Instruction s = Status s -> ST s ()
 
-finalBuffer :: Status s -> ST s (V.Vector Int)
-finalBuffer status = undefined
+finalBuffer :: Status s -> ST s (VU.Vector Int)
+finalBuffer status = do
+  frozen <- VU.freeze (buffer status)
+  (minIndex, maxIndex) <- readSTRef (modifiedRange status)
+  pure $ VU.slice minIndex (maxIndex + 1 - minIndex) frozen
 
 initialStatus :: Program s -> ST s (Status s)
 initialStatus program
   =   Status
-  <$> M.new 10000000
+  <$> MU.new 10000000
   <*> newSTRef 5000000
   <*> newSTRef (firstStep program)
   <*> newSTRef 0
@@ -77,8 +80,7 @@ executeStep :: Step s -> Status s -> ST s ()
 executeStep step status = do
   modifySTRef (stepsTaken status) (+ 1)
   currentIndex <- index status & readSTRef
-  traceShowM currentIndex
-  currentValue <- M.read (buffer status) currentIndex
+  currentValue <- MU.read (buffer status) currentIndex
   if currentValue > 0
     then executeFunction (trueFunction  step) status
     else executeFunction (falseFunction step) status
@@ -89,7 +91,7 @@ executeFunction function status = mapMonads status function
 mapMonads :: Monad m => a -> [a -> m ()] -> m ()
 mapMonads a list = map ($ a) list & sequence_
 
-executeProgram :: Program s -> ST s (V.Vector Int)
+executeProgram :: Program s -> ST s (VU.Vector Int)
 executeProgram program = do
   status <- initialStatus program
   advanceProgram program status
@@ -98,7 +100,7 @@ executeProgram program = do
 instructionWrite :: Int -> Instruction s
 instructionWrite value status = do
   writeIndex <- readSTRef (index status)
-  M.write (buffer status) writeIndex value
+  MU.write (buffer status) writeIndex value
   modifySTRef (modifiedRange status) (extendRange writeIndex)
     where extendRange n (low, high) = (min n low, max n high)
 
