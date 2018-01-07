@@ -19,8 +19,9 @@ main = do
   -}
 
   input1 <- readFile "inputs/input25test.txt"
+  let input1a = input1 & lines & map (dropWhile (== ' ')) & unlines
   let output1 = runST $
-                  case parse parseProgram "inputs/input25test.txt" input1 of
+                  case parse parseProgram "inputs/input25test.txt" input1a of
                     Left err -> pure $ Left err
                     Right program -> traceShow program $ executeProgram program <&> Right
   case output1 of

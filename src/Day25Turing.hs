@@ -38,6 +38,7 @@ instance Show (Step s) where
         ++ show (length false)
         ++ ", "
         ++ show (length true)
+        ++ ")"
 
 type Function s = [Instruction s]
 type Instruction s = Status s -> ST s ()
