@@ -23,6 +23,8 @@ library
                      , Day10Rope
                      , Day15Generator
                      , Day20Particles
+                     , Day21BoolStreams
+                     , Day21PatternMatcher
                      , Day22Grid
                      , Day25Turing
                      , Day25TuringParser
