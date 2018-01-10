@@ -7,7 +7,6 @@ import Day21BoolStreams
 import Lib
 import qualified Data.Map as Map
 import Data.Map(Map)
-import Debug.Trace
 import Data.List(sort)
 
 data Pattern = Pattern { pRowLength :: Int, pPixels :: [Bool] }
@@ -35,9 +34,7 @@ load :: IO Matchers
 load = do
   input <- readFile "inputs/input21.txt"
   let inputs = lines input
-  traceIO $ "inputs: " ++ unlines inputs
   let matchers = foldr (\input -> Map.union (parseMatchers input)) Map.empty inputs
-  traceIO $ "matchers: (" ++ show (Map.size matchers) ++ "), " ++ (Map.toList matchers & map (\(x, y) -> (showGrid x, showGrid y)) & map show & sort & unlines)
   pure matchers
 
 parseMatchers :: String -> Map [Bool] [Bool]
@@ -54,16 +51,23 @@ parseMatch input = (source, dest)
 
 enhance :: Matchers -> Pattern -> Pattern
 enhance matchers (Pattern rowLength input)
-  = if rowLength `mod` 2 == 0
-      then enhanceBy 2
-      else enhanceBy 3
+  | rowLength `mod` 2 == 0 = enhanceBy 2
+  | rowLength `mod` 3 == 0 = enhanceBy 3
+  | otherwise = error $ "panic, someone just called enhance with rowLength=" ++ show rowLength
   where enhanceBy subLength
           = input
           & toSubgrids rowLength subLength
-          & map (\grid -> trace ("looking up " ++ showGrid grid) grid)
           & map (matchers Map.!)
           & fromSubgrids rowLength 2
-          & Pattern (rowLength + 1)
+          & Pattern (rowLength + numRows)
+          where numRows = rowLength `div` subLength
 
 showGrid :: [Bool] -> String
 showGrid = map (\value -> if value then '#' else '.')
+
+drawPattern :: Pattern -> String
+drawPattern (Pattern rowLength pixels)
+  = pixels
+  & toRows rowLength
+  & map showGrid
+  & unlines
