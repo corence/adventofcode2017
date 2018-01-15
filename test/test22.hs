@@ -12,16 +12,13 @@ main :: IO ()
 main = hspec $ do
   describe "Part 1" $ do
     let input = [Pos 1 1, Pos (-1) 0]
-    let update (actions, state)
-         = let action = nextAction state
-           in (action, applyAction action state)
-    let actionStream = iterate update (Action (Pos 0 0) North False, initState input)
+    let actionStream = iterate update (initState input)
     it "given example 1" $ do
-      let infections = take 7 actionStream & filter (infect . fst)
+      let infections = actionStream !! 7 & sInfectionEvents
       length infections `shouldBe` 5
     it "given example 2" $ do
-      let infections = take 70 actionStream & filter (infect . fst)
+      let infections = actionStream !! 70 & sInfectionEvents
       length infections `shouldBe` 41
     it "given example 3" $ do
-      let infections = take 10000 actionStream & filter (infect . fst)
+      let infections = actionStream !! 10000 & sInfectionEvents
       length infections `shouldBe` 5587

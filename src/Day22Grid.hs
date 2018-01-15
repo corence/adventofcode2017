@@ -3,9 +3,10 @@ module Day22Grid where
 
 import qualified Data.Set as Set
 import Data.Set(Set)
+import Lib
 
 data Pos = Pos Int Int deriving (Show, Eq, Ord)
-data Dir = North | East | South | West
+data Dir = North | East | South | West deriving Show
 
 clockwise :: Dir -> Dir
 clockwise North = East
@@ -20,34 +21,40 @@ counterclockwise South = East
 counterclockwise East = North
 
 advance :: Dir -> Pos -> Pos
-advance North (Pos x y) = Pos (x + 1) y
-advance East  (Pos x y) = Pos x (y + 1)
-advance South (Pos x y) = Pos (x - 1) y
-advance West  (Pos x y) = Pos x (y - 1)
+advance East  (Pos x y) = Pos (x + 1) y
+advance North (Pos x y) = Pos x (y + 1)
+advance West  (Pos x y) = Pos (x - 1) y
+advance South (Pos x y) = Pos x (y - 1)
 
-data Action = Action {
-                oldPos :: Pos,
-                newDirection :: Dir,
-                infect :: Bool
-                }
+data Dude = Dude {
+                 dudePos :: Pos,
+                 dudeDirection :: Dir
+                 } deriving Show
 
-data State = State {
-                dudePos :: Pos,
-                dudeDirection :: Dir,
-                infections :: Set Pos
-                }
+data Status = Status {
+                dude :: Dude,
+                sInfections :: Set Pos,
+                sInfectionEvents :: [Pos]
+                } deriving Show
 
-nextAction :: State -> Action
-nextAction (State dudePos dudeDirection infections)
-  = Action dudePos newDirection infect
-    where infect = Set.member dudePos infections
-          newDirection = if infect then clockwise dudeDirection else counterclockwise dudeDirection
+initState :: [Pos] -> Status
+initState poses = Status (Dude (Pos 0 0) North) (Set.fromList poses) []
 
-applyAction :: Action -> State -> State
-applyAction (Action oldPos newDirection infect) (State dudePos dudeDirection infections)
-  = State newPos newDirection newInfections
-    where newPos = advance newDirection oldPos
-          newInfections = if infect then Set.insert oldPos infections else Set.delete oldPos infections
+update :: Status -> Status
+update status@(Status dude infections infectionEvents)
+  = let pos = dudePos dude
+    in if Set.member pos infections
+      then clearInfection pos status & updateDude False
+      else createInfection pos status & updateDude True
 
-initState :: [Pos] -> State
-initState poses = State (Pos 0 0) North (Set.fromList poses)
+clearInfection :: Pos -> Status -> Status
+clearInfection pos status = status { sInfections = Set.delete pos (sInfections status) }
+
+createInfection :: Pos -> Status -> Status
+createInfection pos status = status { sInfections = Set.insert pos (sInfections status), sInfectionEvents = pos : sInfectionEvents status }
+
+updateDude :: Bool -> Status -> Status
+updateDude isInfecting status = status { dude = Dude newPos newDirection }
+  where newDirection = if isInfecting then counterclockwise oldDirection else clockwise oldDirection
+        newPos = advance newDirection oldPos
+        (Dude oldPos oldDirection) = dude status
