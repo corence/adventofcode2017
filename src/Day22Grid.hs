@@ -2,7 +2,7 @@
 module Day22Grid where
 
 import qualified Data.Map as Map
-import Data.Map(Map, (!))
+import Data.Map(Map)
 import Lib
 
 data Pos = Pos Int Int deriving (Show, Eq, Ord)
@@ -47,28 +47,33 @@ update :: Status -> Status
 update status@(Status dude infections infectionEvents)
   = (updateHealth newHealth pos . updateDude directionChange) status
   where pos = dudePos dude
-        (newHealth, directionChange) = case infections ! pos of
-                                        Clean -> (Infected, counterclockwise)
-                                        Infected -> (Clean, clockwise)
+        (newHealth, directionChange) = case Map.lookup pos infections of
+                                        Nothing -> (Infected, counterclockwise)
+                                        Just Clean -> (Infected, counterclockwise)
+                                        Just Infected -> (Clean, clockwise)
 
 -- this is the "update" function for part 2 -- with weakened and flagged nodes
 reconstitute :: Status -> Status
 reconstitute status@(Status dude infections infectionEvents)
   = (updateHealth newHealth pos . updateDude directionChange) status
   where pos = dudePos dude
-        (newHealth, directionChange) = case infections ! pos of
-                                        Clean -> (Weakened, counterclockwise)
-                                        Weakened -> (Infected, id)
-                                        Infected -> (Flagged, clockwise)
-                                        Flagged -> (Clean, clockwise . clockwise)
+        (newHealth, directionChange) = case Map.lookup pos infections of
+                                        Nothing -> (Weakened, counterclockwise)
+                                        Just Clean -> (Weakened, counterclockwise)
+                                        Just Weakened -> (Infected, id)
+                                        Just Infected -> (Flagged, clockwise)
+                                        Just Flagged -> (Clean, clockwise . clockwise)
 
 updateHealth :: Health -> Pos -> Status -> Status
 updateHealth health pos status
-  = status { sInfections = Map.insert pos health (sInfections status) }
+  = status { sInfections = Map.insert pos health (sInfections status),
+             sInfectionEvents = newInfectionEvents
+           }
+           where newInfectionEvents = if health == Infected then pos : sInfectionEvents status else sInfectionEvents status
 
 updateDude :: (Dir -> Dir) -> Status -> Status
 updateDude directionChange status = status { sDude = Dude newPos newDirection }
-  where newDirection = directionChange newDirection
+  where newDirection = directionChange oldDirection
         newPos = advance newDirection oldPos
         (Dude oldPos oldDirection) = sDude status
 

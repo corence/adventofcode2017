@@ -1,4 +1,6 @@
 
+{-# LANGUAGE LambdaCase #-}
+
 import Lib
 import Test.Hspec
 import Test.QuickCheck
@@ -6,7 +8,7 @@ import Day22Grid
 import Data.Bifunctor
 
 import qualified Data.Map as Map
-import Data.Map(Map, (!))
+import Data.Map(Map)
 
 main :: IO ()
 main = do
@@ -62,11 +64,12 @@ main = do
 showGrid :: Int -> Int -> Map Pos Health -> String
 showGrid xMax yMax healths
   = map (\y -> map (\x -> posToChar (Pos x y)) [(-xMax)..xMax]) [(-yMax)..yMax] & unlines
-  where posToChar pos = case healths ! pos of
-                          Clean -> '.'
-                          Weakened -> 'W'
-                          Infected -> '#'
-                          Flagged -> 'F'
+  where posToChar pos = case Map.lookup pos healths of
+                          Nothing -> '.'
+                          Just Clean -> '.'
+                          Just Weakened -> 'W'
+                          Just Infected -> '#'
+                          Just Flagged -> 'F'
 
 expectedGrids :: [String]
 expectedGrids = map unlines $ [[
