@@ -12,11 +12,11 @@ import Data.Map(Map)
 
 main :: IO ()
 main = do
-  input <- readFile "inputs/input22.txt" <&> inputToPoses
+  let testStatus = [Pos 1 (-1), Pos (-1) 0] & initState
+  realStatus <- readFile "inputs/input22.txt" <&> inputToPoses <&> initState
   hspec $ do
     describe "Part 1 test data" $ do
-      let input = [Pos 1 (-1), Pos (-1) 0]
-      let actionStream = iterate update (initState input)
+      let actionStream = iterate update testStatus
       it "given example 1" $ do
         let infections = actionStream !! 7 & sInfectionEvents
         length infections `shouldBe` 5
@@ -28,8 +28,7 @@ main = do
         length infections `shouldBe` 5587
 
     describe "Part 1 real data" $ do
-      let initial = initState input
-      let actionStream = iterate update initial
+      let actionStream = iterate update realStatus
       it "should follow the expected path for the first 8 iterations" $ do
         take 8 actionStream & map sDude & map dudePos `shouldBe` [Pos 0 0, Pos 1 0, Pos 1 1, Pos 2 1, Pos 2 2, Pos 1 2, Pos 1 3, Pos 2 3]
       it "the first 3 iterations should cause the expected grids" $ do
@@ -49,17 +48,13 @@ main = do
              (zip [0..] expectedGrids)
 
     describe "Part 2 test data" $ do
-      let input = [Pos 1 (-1), Pos (-1) 0]
-      let actionStream = iterate update (initState input)
+      let actionStream = iterate reconstitute testStatus
       it "given example 1" $ do
-        let infections = actionStream !! 7 & sInfectionEvents
-        length infections `shouldBe` 5
+        let infections = actionStream !! 100 & sInfectionEvents
+        length infections `shouldBe` 26
       it "given example 2" $ do
-        let infections = actionStream !! 70 & sInfectionEvents
-        length infections `shouldBe` 41
-      it "given example 3" $ do
-        let infections = actionStream !! 10000 & sInfectionEvents
-        length infections `shouldBe` 5587
+        let infections = actionStream !! 10000000 & sInfectionEvents
+        length infections `shouldBe` 2511944
 
 showGrid :: Int -> Int -> Map Pos Health -> String
 showGrid xMax yMax healths
