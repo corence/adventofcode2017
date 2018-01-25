@@ -1,30 +1,39 @@
 
-{-# LANGUAGE LambdaCase #-}
-
 import Lib
 import Test.Hspec
 import Test.QuickCheck
 import Day22Grid
 import Data.Bifunctor
+import Control.Monad.ST
+import Control.Monad
+
+import qualified Data.Vector as V
 
 import qualified Data.Map as Map
 import Data.Map(Map)
 
+runIterations :: Int -> Int -> [Pos] -> Int -> V.Vector Health
+runIterations xMax yMax infectionPoses numIterations
+  = runST $ do
+      status <- initState xMax yMax infectionPoses
+      replicateM_ numIterations (reconstitute status)
+      V.unsafeFreeze (sInfections status)
+
 main :: IO ()
 main = do
-  let testStatus = [Pos 1 (-1), Pos (-1) 0] & initState
-  realStatus <- readFile "inputs/input22.txt" <&> inputToPoses <&> initState
+  let testPoses = [Pos 1 (-1), Pos (-1) 0]
+  realPoses <- readFile "inputs/input22.txt" <&> inputToPoses
   hspec $ do
     describe "Part 1 test data" $ do
-      let actionStream = iterate update testStatus
+      let actionStream = runIterations 1 1 testPoses
       it "given example 1" $ do
-        let infections = actionStream !! 7 & sInfectionEvents
+        let infections = actionStream 7 <&> sNumInfectionEvents
         length infections `shouldBe` 5
       it "given example 2" $ do
-        let infections = actionStream !! 70 & sInfectionEvents
+        let infections = actionStream !! 70 & sNumInfectionEvents
         length infections `shouldBe` 41
       it "given example 3" $ do
-        let infections = actionStream !! 10000 & sInfectionEvents
+        let infections = actionStream !! 10000 & sNumInfectionEvents
         length infections `shouldBe` 5587
 
     describe "Part 1 real data" $ do
@@ -50,10 +59,10 @@ main = do
     describe "Part 2 test data" $ do
       let actionStream = iterate reconstitute testStatus
       it "given example 1" $ do
-        let infections = actionStream !! 100 & sInfectionEvents
+        let infections = actionStream !! 100 & sNumInfectionEvents
         length infections `shouldBe` 26
       it "given example 2" $ do
-        let infections = actionStream !! 10000000 & sInfectionEvents
+        let infections = actionStream !! 10000000 & sNumInfectionEvents
         length infections `shouldBe` 2511944
 
 showGrid :: Int -> Int -> Map Pos Health -> String

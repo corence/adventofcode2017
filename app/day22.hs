@@ -1,6 +1,7 @@
 
 import Day22Grid
 import Lib
+import Control.Monad
 
 main :: IO ()
 main = do

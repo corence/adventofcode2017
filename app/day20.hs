@@ -48,6 +48,13 @@ parseParticle index = do
   acc <- parseVector
   pure $ Particle index pos vel acc
 
+parseParticleApplicative :: Int -> ReadP Particle
+parseParticleApplicative index =
+  Particle index
+  <$> (string "p=" *> parseVector)
+  <*> (string ", v=" *> parseVector)
+  <*> (string ", a=" *> parseVector)
+
 parseVector :: ReadP Vec3
 parseVector = do
   char '<'

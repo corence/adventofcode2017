@@ -4,6 +4,9 @@ module Day22Grid where
 import qualified Data.Map as Map
 import Data.Map(Map)
 import Lib
+import qualified Data.Vector.Mutable as VM
+import Control.Monad.ST
+import Data.STRef
 
 data Pos = Pos Int Int deriving (Show, Eq, Ord)
 data Dir = North | East | South | West deriving (Show, Eq)
@@ -27,55 +30,80 @@ advance North (Pos x y) = Pos x (y - 1)
 advance West  (Pos x y) = Pos (x - 1) y
 advance South (Pos x y) = Pos x (y + 1)
 
-data Dude = Dude {
-                 dudePos :: Pos,
-                 dudeDirection :: Dir
-                 } deriving (Show, Eq)
+data Dude s = Dude {
+                 dudePos :: STRef s Pos,
+                 dudeDirection :: STRef s Dir
+                 } deriving (Eq)
 
-data Status = Status {
-                sDude :: Dude,
-                sInfections :: Map Pos Health,
-                sInfectionEvents :: [Pos]
-                } deriving Show
+data Status s = Status {
+                sGridXMax :: Int,
+                sGridYMax :: Int,
+                sDude :: Dude s,
+                sInfections :: VM.MVector s Health,
+                sNumInfectionEvents :: STRef s Int
+                }
 
-initState :: [Pos] -> Status
-initState poses
-  = Status (Dude (Pos 0 0) North) infections []
+instance Show (Status s) where
+  show (Status xMax yMax dude infections numInfectionEvents)
+    = "omg its a status"
+
+initState :: Int -> Int -> [Pos] -> ST s (Status s)
+initState xMax yMax poses
+  =   Status xMax yMax
+  <$> (Dude <$> newSTRef (Pos 0 0) <*> newSTRef North)
+  <*> VM.replicate gridSize Clean
+  <*> newSTRef 0
   where infections = zip poses (repeat Infected) & Map.fromList
+        gridSize = (xMax * 2 + 1) * (yMax * 2 + 1)
 
-update :: Status -> Status
-update status@(Status dude infections infectionEvents)
-  = (updateHealth newHealth pos . updateDude directionChange) status
-  where pos = dudePos dude
-        (newHealth, directionChange) = case Map.lookup pos infections of
-                                        Nothing -> (Infected, counterclockwise)
-                                        Just Clean -> (Infected, counterclockwise)
-                                        Just Infected -> (Clean, clockwise)
+posToIndex :: Status s -> Pos -> Int
+posToIndex status@(Status xMax yMax _ _ numInfectionEvents) pos@(Pos px py)
+  = y * width + x
+  where y = py + yMax
+        x = px + xMax
+        width = xMax * 2 + 1
+
+update :: Status s -> ST s ()
+update status@(Status _ _ dude infections infectionEvents)
+  = do
+  pos <- readSTRef (dudePos dude)
+  oldHealth <- VM.read infections (posToIndex status pos)
+  let (newHealth, directionChange) = case oldHealth of
+                                        Clean -> (Infected, counterclockwise)
+                                        Infected -> (Clean, clockwise)
+  updateHealth newHealth pos status
+  updateDude directionChange status
 
 -- this is the "update" function for part 2 -- with weakened and flagged nodes
-reconstitute :: Status -> Status
-reconstitute status@(Status dude infections infectionEvents)
-  = (updateHealth newHealth pos . updateDude directionChange) status
-  where pos = dudePos dude
-        (newHealth, directionChange) = case Map.lookup pos infections of
-                                        Nothing -> (Weakened, counterclockwise)
-                                        Just Clean -> (Weakened, counterclockwise)
-                                        Just Weakened -> (Infected, id)
-                                        Just Infected -> (Flagged, clockwise)
-                                        Just Flagged -> (Clean, clockwise . clockwise)
+reconstitute :: Status s -> ST s ()
+reconstitute status@(Status _ _ dude infections infectionEvents)
+  = do
+    pos <- readSTRef $ dudePos dude
+    oldHealth <- VM.read infections (posToIndex status pos)
+    let (newHealth, directionChange)
+          = case oldHealth of
+              Clean -> (Weakened, counterclockwise)
+              Weakened -> (Infected, id)
+              Infected -> (Flagged, clockwise)
+              Flagged -> (Clean, clockwise . clockwise)
+    updateHealth newHealth pos status
+    updateDude directionChange status
 
-updateHealth :: Health -> Pos -> Status -> Status
-updateHealth health pos status
-  = status { sInfections = Map.insert pos health (sInfections status),
-             sInfectionEvents = newInfectionEvents
-           }
-           where newInfectionEvents = if health == Infected then pos : sInfectionEvents status else sInfectionEvents status
+updateHealth :: Health -> Pos -> Status s -> ST s ()
+updateHealth health pos status@(Status _ _ _ sInfections sNumInfectionEvents) = do
+  VM.write sInfections ( posToIndex status pos) health
+  if health == Infected
+      then modifySTRef sNumInfectionEvents (+ 1)
+      else pure ()
 
-updateDude :: (Dir -> Dir) -> Status -> Status
-updateDude directionChange status = status { sDude = Dude newPos newDirection }
-  where newDirection = directionChange oldDirection
-        newPos = advance newDirection oldPos
-        (Dude oldPos oldDirection) = sDude status
+updateDude :: (Dir -> Dir) -> Status s -> ST s ()
+updateDude directionChange status = do
+  oldPos <- readSTRef $ dudePos (sDude status)
+  oldDirection <- readSTRef $ dudeDirection (sDude status)
+  let newDirection = directionChange oldDirection
+  let newPos = advance newDirection oldPos
+  writeSTRef (dudePos (sDude status)) newPos
+  writeSTRef (dudeDirection (sDude status)) newDirection
 
 inputToPoses :: String -> [Pos]
 inputToPoses input
